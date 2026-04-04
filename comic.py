@@ -1,45 +1,44 @@
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
 
-print("報告主人，僕人已換上『人類偽裝服』，準備再次潛入偵察...")
+print("報告主人，僕人正在為您抓取並排版今日的漫畫清單...")
 
-# 1. 告訴僕人目標網址（如果您的漫畫是在特定的新書頁面看到的，請把網址替換成那個頁面）
-url = "https://www.tongli.com.tw/webpagebooks.aspx?page=1&s=1"
+# 1. 取得今日日期，讓標題更有質感
+today_str = datetime.now().strftime("%Y年%m月%d日")
 
-# 2. 為僕人準備一件逼真的「人類偽裝服」
-# 這樣警衛就會以為我們是一般的 Windows 電腦與 Chrome 瀏覽器
+url = "https://www.tongli.com.tw/"
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 }
 
-# 3. 這次敲門時，穿上偽裝服 (加入 headers)
 response = requests.get(url, headers=headers)
 response.encoding = 'utf-8'
-
-# 4. 拿出放大鏡（BeautifulSoup）
 soup = BeautifulSoup(response.text, "html.parser")
-
-# 5. 找出所有貼著 "pk_txt" 貼紙的大紙盒
 comic_boxes = soup.find_all("div", class_="pk_txt")
 
-print(f"\n突破防線！主人，僕人這次總共為您找到了 {len(comic_boxes)} 本漫畫情報！")
-print("以下是為您整理的專屬清單：")
-print("=" * 40)
+# 2. 準備要寫入展示牆的「Markdown 排版內容」
+md_content = f"# 📅 {today_str} 台灣漫畫新書情報\n\n"
+md_content += "早安，主人！以下是僕人為您整理的最新漫畫清單：\n\n"
+md_content += "| 📘 書名 | ✍️ 作者 | 🏷️ 集數 |\n"
+md_content += "| :--- | :--- | :--- |\n"
 
-# 6. 請僕人把紙盒一個一個打開
+# 3. 把每一本書的資料填入表格中
 for box in comic_boxes:
-    # 拿出 <em> 標籤裡的書名
     title_tag = box.find("em")
     title = title_tag.text if title_tag else "未知書名"
     
-    # 拿出所有的 <span> 標籤
     spans = box.find_all("span")
     author = spans[0].text if len(spans) > 0 else "未知作者"
     volume = spans[1].text if len(spans) > 1 else ""
     
-    # 向主人報告
-    print(f"📘 書名：{title} {volume}")
-    print(f"✍️ 作者：{author}")
-    print("-" * 40)
+    # 寫入表格的每一列
+    md_content += f"| **{title}** | {author} | {volume} |\n"
 
-print("\n報告完畢！主人，您的匿蹤爬蟲系統已完美升級！")
+md_content += "\n---\n*管家敬上：您的專屬自動化收集系統每日為您更新*"
+
+# 4. 吩咐僕人將排版好的內容，寫入名為 README.md 的展示牆檔案中
+with open("README.md", "w", encoding="utf-8") as file:
+    file.write(md_content)
+
+print("報告完畢！主人，精美展示牆已繪製完成！")
