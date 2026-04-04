@@ -1,0 +1,26 @@
+name: Daily_Comic_Scraper
+
+on:
+  schedule:
+    # 這是 cron 語法，設定為每天台灣時間早上 8 點執行一次
+    - cron: '0 0 * * *'
+  workflow_dispatch: # 這行能讓您隨時手動點擊執行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 複製程式碼到雲端伺服器
+        uses: actions/checkout@v3
+
+      - name: 安裝 Python 環境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: 安裝僕人所需的套件
+        run: |
+          pip install -r requirements.txt
+
+      - name: 執行漫畫抓取任務
+        run: python comic.py
