@@ -2,19 +2,22 @@ name: Daily_Comic_Scraper
 
 on:
   schedule:
-    # 這是 cron 語法，設定為每天台灣時間早上 8 點執行一次
     - cron: '0 0 * * *'
-  workflow_dispatch: # 這行能讓您隨時手動點擊執行
+  workflow_dispatch:
+
+# 這裡給予僕人修改與寫入檔案的專屬權限
+permissions:
+  contents: write
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: 複製程式碼到雲端伺服器
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 安裝 Python 環境
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
@@ -22,5 +25,13 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: 執行漫畫抓取任務
+      - name: 執行漫畫抓取與排版任務
         run: python comic.py
+
+      - name: 將精美展示牆掛上首頁
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add README.md
+          git commit -m "管家報告：已更新今日漫畫清單" || exit 0
+          git push
