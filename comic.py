@@ -1,98 +1,93 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+import json
+import os
+import time
 
-print("報告主人，僕人正在為您繪製精美的網頁...")
+print("報告主人，僕人正準備執行深度搜索任務，潛入內頁為您奪取系列別與封面...")
 
-today_str = datetime.now().strftime("%Y年%m月%d日")
-url = "https://www.tongli.com.tw/"
-headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-}
+# 1. 鎖定測試日期與帳本
+target_date = "2026-04-01"
+json_file = "data.json"
 
+if os.path.exists(json_file):
+    with open(json_file, "r", encoding="utf-8") as f:
+        all_data = json.load(f)
+else:
+    all_data = {}
+
+# 2. 設定基礎網址與目標網址
+clean_base_url = "https://www.tongli.com.tw" # 不帶結尾斜線，方便與圖片路徑拼接
+url = "https://www.tongli.com.tw/webpagebooks.aspx?page=1&s=1"
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+
+# 3. 取得列表頁
 response = requests.get(url, headers=headers)
 response.encoding = 'utf-8'
 soup = BeautifulSoup(response.text, "html.parser")
-comic_boxes = soup.find_all("div", class_="pk_txt")
 
-# 準備網頁的骨架 (HTML) 與美化服裝 (CSS)
-html_content = f"""
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的專屬漫畫情報站</title>
-    <style>
-        body {{
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, '微軟正黑體';
-            background-color: #f4f7f6;
-            color: #333;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }}
-        .container {{
-            background-color: #ffffff;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            padding: 30px;
-            max-width: 800px;
-            width: 100%;
-        }}
-        h1 {{ color: #2c3e50; text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 10px; }}
-        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-        th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-        th {{ background-color: #3498db; color: white; }}
-        tr:hover {{ background-color: #f1f1f1; }}
-        .footer {{ margin-top: 20px; text-align: center; color: #7f8c8d; font-size: 0.9em; }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <h1>📅 {today_str} 台灣漫畫新書情報</h1>
-        <p>早安，主人！以下是僕人為您整理的最新漫畫清單：</p>
-        <table>
-            <thead>
-                <tr>
-                    <th>📘 書名</th>
-                    <th>✍️ 作者</th>
-                    <th>🏷️ 集數</th>
-                </tr>
-            </thead>
-            <tbody>
-"""
+img_boxes = soup.find_all("div", class_="pk_img")
+txt_boxes = soup.find_all("div", class_="pk_txt")
 
-# 把每一本書的資料填入網頁表格中
-for box in comic_boxes:
-    title_tag = box.find("em")
+tongli_list = []
+
+# 4. 開始同時巡視圖片盒與文字盒
+for img_box, txt_box in zip(img_boxes, txt_boxes):
+    title_tag = txt_box.find("em")
     title = title_tag.text if title_tag else "未知書名"
-    spans = box.find_all("span")
+    
+    spans = txt_box.find_all("span")
     author = spans[0].text if len(spans) > 0 else "未知作者"
     volume = spans[1].text if len(spans) > 1 else ""
+
+    # 尋找進入內頁的金鑰匙
+    a_tag = img_box.find("a")
+    if not a_tag:
+        continue
+        
+    detail_link = a_tag["href"]
+    # 組合出完整的內頁網址
+    full_detail_url = clean_base_url + "/" + detail_link if not detail_link.startswith("/") else clean_base_url + detail_link
+
+    print(f"正在開門進入《{title}》的房間蒐集情報...")
     
-    html_content += f"""
-                <tr>
-                    <td><strong>{title}</strong></td>
-                    <td>{author}</td>
-                    <td>{volume}</td>
-                </tr>
-    """
+    # 5. 進入內頁抓取
+    try:
+        detail_res = requests.get(full_detail_url, headers=headers)
+        detail_res.encoding = 'utf-8'
+        detail_soup = BeautifulSoup(detail_res.text, "html.parser")
 
-# 補上網頁的結尾
-html_content += """
-            </tbody>
-        </table>
-        <div class="footer">管家敬上：您的專屬自動化收集系統每日為您更新</div>
-    </div>
-</body>
-</html>
-"""
+        # 抓取封面網址
+        cover_tag = img_box.find("img")
+        cover_url = clean_base_url + cover_tag["src"] if cover_tag else ""
 
-# 吩咐僕人將排版好的內容，寫入名為 index.html 的網頁大門檔案中
-with open("index.html", "w", encoding="utf-8") as file:
-    file.write(html_content)
+        # 抓取系列別
+        series_tag = detail_soup.find("span", id="ContentPlaceHolder1_ReaderTxt")
+        series_name = series_tag.text.strip() if series_tag else "無系列資訊"
+    except Exception as e:
+        print(f"驚動了警衛！進入《{title}》房間時發生錯誤: {e}")
+        cover_url = ""
+        series_name = "無系列資訊"
 
-print("報告完畢！主人，專屬網頁 index.html 已繪製完成！")
+    # 6. 將資料整理裝箱
+    tongli_list.append({
+        "title": title,
+        "author": author,
+        "volume": volume,
+        "series": series_name,
+        "cover": cover_url
+    })
+    
+    # 貼心提醒：為了不被警衛發現，每開一扇門稍微休息 0.5 秒
+    time.sleep(0.5)
+
+# 7. 寫入總帳本
+if target_date not in all_data:
+    all_data[target_date] = {}
+    
+all_data[target_date]["東立"] = tongli_list
+
+with open(json_file, "w", encoding="utf-8") as f:
+    json.dump(all_data, f, ensure_ascii=False, indent=2)
+
+print(f"報告完畢！主人，總共 {len(tongli_list)} 本漫畫的全彩深度情報，已完美存入 {target_date} 的帳本中！")
