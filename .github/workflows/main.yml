@@ -32,6 +32,6 @@ jobs:
         run: |
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add README.md
-          git commit -m "管家報告：已更新今日漫畫清單" || exit 0
+          git add index.html
+          git commit -m "管家報告：已更新今日網頁清單" || exit 0
           git push
