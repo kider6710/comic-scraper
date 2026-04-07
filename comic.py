@@ -3,11 +3,15 @@ from bs4 import BeautifulSoup
 import json
 import os
 import time
+from datetime import datetime, timezone, timedelta
 
 print("報告主人，僕人正準備執行深度搜索任務，潛入內頁為您奪取系列別與封面...")
 
 # 1. 鎖定測試日期與帳本
-target_date = "2026-04-01"
+# 設定台灣專屬時區 (UTC+8)
+tw_tz = timezone(timedelta(hours=8))
+# 讓僕人每次執行時，自動看一眼懷錶獲取今天的真實日期
+target_date = datetime.now(tw_tz).strftime("%Y-%m-%d")
 json_file = "data.json"
 
 if os.path.exists(json_file):
