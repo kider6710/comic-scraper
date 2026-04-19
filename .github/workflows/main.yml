@@ -25,8 +25,10 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: 執行漫畫抓取與排版任務
+      - name: 執行深度爬蟲特務
         run: python comic.py
+        env:
+          PROXY_URL: ${{ secrets.PROXY_URL }}
 
       - name: 將精美展示牆掛上首頁
         run: |
