@@ -5,12 +5,24 @@ import os
 import time
 from datetime import datetime, timezone, timedelta
 
-print("報告主人，僕人正準備執行深度搜索任務，潛入內頁為您奪取系列別與封面...")
+print("報告主人，僕人正準備執行深度搜索任務（已啟動替身使者防護機制）...")
 
-# 1. 鎖定測試日期與帳本
-# 設定台灣專屬時區 (UTC+8)
+# 1. 資安防護與替身使者設定
+# 從環境變數讀取密碼，保護主人的資安
+proxy_url = os.environ.get("PROXY_URL")
+
+proxies = None
+if proxy_url:
+    proxies = {
+        "http": proxy_url,
+        "https": proxy_url
+    }
+    print("✨ 替身使者已連線，準備出發！")
+else:
+    print("⚠️ 尚未設定替身，僕人將以真面目出勤 (本機測試用)")
+
+# 2. 鎖定台灣時區 (UTC+8) 與帳本
 tw_tz = timezone(timedelta(hours=8))
-# 讓僕人每次執行時，自動看一眼懷錶獲取今天的真實日期
 target_date = datetime.now(tw_tz).strftime("%Y-%m-%d")
 json_file = "data.json"
 
@@ -20,22 +32,28 @@ if os.path.exists(json_file):
 else:
     all_data = {}
 
-# 2. 設定基礎網址與目標網址
-clean_base_url = "https://www.tongli.com.tw" # 不帶結尾斜線，方便與圖片路徑拼接
+# 3. 設定基礎網址與目標網址
+clean_base_url = "https://www.tongli.com.tw"
 url = "https://www.tongli.com.tw/webpagebooks.aspx?page=1&s=1"
-headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
 
-# 3. 取得列表頁
-response = requests.get(url, headers=headers)
-response.encoding = 'utf-8'
-soup = BeautifulSoup(response.text, "html.parser")
+# 4. 取得列表頁 (掛載替身防護)
+try:
+    response = requests.get(url, headers=headers, proxies=proxies, timeout=15)
+    response.encoding = 'utf-8'
+    soup = BeautifulSoup(response.text, "html.parser")
+except Exception as e:
+    print(f"❌ 大門連線失敗，請檢查網路或替身使者狀態：{e}")
+    exit()
 
 img_boxes = soup.find_all("div", class_="pk_img")
 txt_boxes = soup.find_all("div", class_="pk_txt")
 
 tongli_list = []
 
-# 4. 開始同時巡視圖片盒與文字盒
+# 5. 開始深度巡視
 for img_box, txt_box in zip(img_boxes, txt_boxes):
     title_tag = txt_box.find("em")
     title = title_tag.text if title_tag else "未知書名"
@@ -50,14 +68,13 @@ for img_box, txt_box in zip(img_boxes, txt_boxes):
         continue
         
     detail_link = a_tag["href"]
-    # 組合出完整的內頁網址
     full_detail_url = clean_base_url + "/" + detail_link if not detail_link.startswith("/") else clean_base_url + detail_link
 
     print(f"正在開門進入《{title}》的房間蒐集情報...")
     
-    # 5. 進入內頁抓取
+    # 6. 進入內頁抓取 (務必也掛載替身防護，避免內頁被擋)
     try:
-        detail_res = requests.get(full_detail_url, headers=headers)
+        detail_res = requests.get(full_detail_url, headers=headers, proxies=proxies, timeout=15)
         detail_res.encoding = 'utf-8'
         detail_soup = BeautifulSoup(detail_res.text, "html.parser")
 
@@ -69,11 +86,11 @@ for img_box, txt_box in zip(img_boxes, txt_boxes):
         series_tag = detail_soup.find("span", id="ContentPlaceHolder1_ReaderTxt")
         series_name = series_tag.text.strip() if series_tag else "無系列資訊"
     except Exception as e:
-        print(f"驚動了警衛！進入《{title}》房間時發生錯誤: {e}")
+        print(f"⚠️ 進入《{title}》房間時發生錯誤: {e}")
         cover_url = ""
         series_name = "無系列資訊"
 
-    # 6. 將資料整理裝箱
+    # 7. 將資料整理裝箱
     tongli_list.append({
         "title": title,
         "author": author,
@@ -82,10 +99,10 @@ for img_box, txt_box in zip(img_boxes, txt_boxes):
         "cover": cover_url
     })
     
-    # 貼心提醒：為了不被警衛發現，每開一扇門稍微休息 0.5 秒
+    # 休息 0.5 秒，避免過度頻繁敲門
     time.sleep(0.5)
 
-# 7. 寫入總帳本
+# 8. 寫入總帳本
 if target_date not in all_data:
     all_data[target_date] = {}
     
