@@ -1,40 +1,39 @@
-name: Daily_Comic_Scraper
+name: 東立新書自動探測特務
 
 on:
   schedule:
-    - cron: '0 0 * * *'
-  workflow_dispatch:
-
-# 這裡給予僕人修改與寫入檔案的專屬權限
-permissions:
-  contents: write
+    # 每天下午 2 點自動執行 (UTC 06:00 = 台灣 14:00)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # 方便主人隨時手動發動攻擊
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
-      - name: 複製程式碼到雲端伺服器
-        uses: actions/checkout@v4
+      - name: 複製雲端倉庫檔案
+        uses: actions/checkout@v3
 
-      - name: 安裝 Python 環境
-        uses: actions/setup-python@v5
+      - name: 設定 Python 環境
+        uses: actions/setup-python@v4
         with:
-          python-version: '3.9'
+          python-version: '3.10'
 
-      - name: 安裝僕人所需的套件
+      - name: 安裝必要套件
         run: |
-          pip install -r requirements.txt
+          pip install requests beautifulsoup4
 
       - name: 執行深度爬蟲特務
-        run: python comic.py
+        # 在此處領取保險箱裡的替身密碼
         env:
           PROXY_URL: ${{ secrets.PROXY_URL }}
+        run: python comic.py
 
-      - name: 將精美展示牆掛上首頁
+      - name: 將最新情報裝箱並推回倉庫
         run: |
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add index.html
-          git commit -m "管家報告：已更新今日網頁清單" || exit 0
-          git pull --rebase
-          git push
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          # 關鍵的一步：將變動後的 data.json 裝箱
+          git add .
+          # 檢查是否有新情報，有的話才進行提交
+          git diff --quiet && git diff --staged --quiet || (git commit -m "更新最新漫畫情報: $(date +'%Y-%m-%d')" && git push)
