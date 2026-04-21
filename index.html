@@ -25,8 +25,11 @@
         }
         h1 { color: #2c3e50; text-align: center; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
         
-        /* 月曆排版 */
-        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 1.2em; font-weight: bold; }
+        /* 月曆排版與時光機選單 */
+        .calendar-header { display: flex; justify-content: center; align-items: center; margin-bottom: 20px; }
+        #month-selector { font-size: 1.2em; font-weight: bold; padding: 8px 15px; border-radius: 8px; border: 2px solid #3498db; color: #2c3e50; background-color: #f8f9fa; cursor: pointer; outline: none; transition: all 0.3s; }
+        #month-selector:hover { background-color: #e8f4fd; }
+        
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; text-align: center; }
         .day-name { font-weight: bold; color: #7f8c8d; padding-bottom: 10px; }
         .day-cell { padding: 15px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #eee; transition: all 0.3s ease; }
@@ -55,12 +58,13 @@
         <h1>📅 專屬漫畫出版月曆</h1>
         
         <div class="calendar-header">
-            <span id="month-display">載入中...</span>
+            <select id="month-selector">
+                <option value="">正在翻閱帳本尋找歷史月份...</option>
+            </select>
         </div>
+        
         <div class="calendar-grid" id="calendar-body">
-            <div class="day-name">日</div><div class="day-name">一</div><div class="day-name">二</div>
-            <div class="day-name">三</div><div class="day-name">四</div><div class="day-name">五</div><div class="day-name">六</div>
-        </div>
+            </div>
 
         <div id="detail-section">
             <h2 id="detail-date-title">請點選月曆上有標示的日期</h2>
@@ -84,12 +88,13 @@
 
     <script>
         let globalComicData = {};
-        let currentDayData = null; // 記住主人目前點選的是哪一天的資料
+        let currentDayData = null; 
+        let availableMonths = []; // 用來儲存所有找到的歷史月份
 
         const filterSelect = document.getElementById('series-filter');
         const sortSelect = document.getElementById('sort-select');
+        const monthSelector = document.getElementById('month-selector');
 
-        // 當主人改變下拉選單時，立刻重新繪製畫面 (不需重整網頁)
         filterSelect.addEventListener('change', () => renderContent());
         sortSelect.addEventListener('change', () => renderContent());
 
@@ -99,22 +104,70 @@
                 globalComicData = await response.json();
             } catch (error) {
                 console.error("找不到帳本", error);
+                monthSelector.innerHTML = '<option>無法載入資料庫</option>';
+                return;
             }
 
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = today.getMonth(); 
+            // 1. 巡邏帳本，萃取所有出現過的月份 (YYYY-MM)
+            const monthSet = new Set();
+            for (const dateString in globalComicData) {
+                const yyyyMm = dateString.substring(0, 7);
+                monthSet.add(yyyyMm);
+            }
             
-            document.getElementById('month-display').innerText = `${year} 年 ${month + 1} 月`;
+            // 將月份排序，最新的月份排在最上面
+            availableMonths = Array.from(monthSet).sort().reverse();
+            
+            if (availableMonths.length === 0) {
+                monthSelector.innerHTML = '<option>目前沒有任何情報</option>';
+                return;
+            }
+
+            // 2. 將找到的月份塞進時光機選單
+            monthSelector.innerHTML = ''; // 清空預設文字
+            availableMonths.forEach(yyyyMm => {
+                const [year, month] = yyyyMm.split('-');
+                const option = document.createElement('option');
+                option.value = yyyyMm;
+                // 去除月份前面多餘的 0，例如 04 變成 4
+                option.innerText = `${year} 年 ${parseInt(month, 10)} 月`;
+                monthSelector.appendChild(option);
+            });
+
+            // 3. 監聽主人切換月份的指令
+            monthSelector.addEventListener('change', (e) => {
+                const [year, month] = e.target.value.split('-');
+                // JavaScript 的月份是從 0 開始的，所以要減 1
+                renderCalendar(parseInt(year, 10), parseInt(month, 10) - 1);
+            });
+
+            // 4. 一打開網頁，自動渲染最新的一個月份
+            const [latestYear, latestMonth] = availableMonths[0].split('-');
+            renderCalendar(parseInt(latestYear, 10), parseInt(latestMonth, 10) - 1);
+        });
+
+        // 畫出特定月份月曆的魔法
+        function renderCalendar(year, month) {
+            const calendarBody = document.getElementById('calendar-body');
+            
+            // 清空舊格子，保留星期標題
+            calendarBody.innerHTML = `
+                <div class="day-name">日</div><div class="day-name">一</div><div class="day-name">二</div>
+                <div class="day-name">三</div><div class="day-name">四</div><div class="day-name">五</div><div class="day-name">六</div>
+            `;
+            
+            // 換月時，把下方的情報區塊隱藏起來保持整潔
+            document.getElementById('detail-section').style.display = 'none';
 
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const calendarBody = document.getElementById('calendar-body');
 
+            // 補齊前面的空白格子
             for (let i = 0; i < firstDay; i++) {
                 calendarBody.appendChild(document.createElement('div'));
             }
 
+            // 填入真正的日期格子
             for (let day = 1; day <= daysInMonth; day++) {
                 const cell = document.createElement('div');
                 cell.className = 'day-cell';
@@ -131,7 +184,7 @@
                 }
                 calendarBody.appendChild(cell);
             }
-        });
+        }
 
         // 點擊日期後，設定控制台並準備渲染
         function showDetails(dateStr, dayData) {
@@ -140,7 +193,6 @@
             document.getElementById('detail-date-title').innerText = `✨ ${dateStr} 漫畫情報 ✨`;
             document.getElementById('controls').style.display = 'flex';
 
-            // 自動收集今天所有的系列別，放進下拉選單中
             let seriesSet = new Set();
             for (let pub in dayData) {
                 dayData[pub].forEach(book => {
@@ -150,70 +202,4 @@
             
             filterSelect.innerHTML = '<option value="all">所有系列</option>';
             seriesSet.forEach(s => {
-                filterSelect.innerHTML += `<option value="${s}">${s}</option>`;
-            });
-            sortSelect.value = 'default';
-
-            renderContent(); // 呼叫魔法渲染函數
-        }
-
-        // 核心渲染魔法：負責處理篩選、排序與畫表格
-        function renderContent() {
-            const contentDiv = document.getElementById('detail-content');
-            contentDiv.innerHTML = '';
-
-            const filterVal = filterSelect.value;
-            const sortVal = sortSelect.value;
-
-            for (const publisher in currentDayData) {
-                let books = currentDayData[publisher];
-
-                // 1. 執行主人的篩選魔法
-                if (filterVal !== 'all') {
-                    books = books.filter(b => b.series === filterVal);
-                }
-                if (books.length === 0) continue;
-
-                // 2. 執行主人的排序魔法 (複製一份陣列以免弄亂原始帳本)
-                let displayBooks = [...books];
-                if (sortVal === 'title') {
-                    // 使用 localeCompare 讓中文能依照筆畫或拼音排序
-                    displayBooks.sort((a, b) => a.title.localeCompare(b.title, 'zh-TW'));
-                } else if (sortVal === 'series') {
-                    displayBooks.sort((a, b) => (a.series || '').localeCompare(b.series || '', 'zh-TW'));
-                }
-
-                // 3. 畫出帶有精美封面的表格
-                let html = `<h3 class="publisher-title">🏢 ${publisher}</h3>`;
-                html += `<table><tr>
-                            <th style="text-align:center;">🖼️ 封面</th>
-                            <th>📘 書名</th>
-                            <th>✍️ 作者</th>
-                            <th>🏷️ 集數</th>
-                            <th>📚 系列</th>
-                         </tr>`;
-                
-                displayBooks.forEach(book => {
-                    let imgHtml = book.cover ? `<img src="${book.cover}" class="cover-img">` : '<span style="color:#bdc3c7;">無圖片</span>';
-                    let seriesHtml = (book.series && book.series !== "無系列資訊") ? `<span class="series-badge">${book.series}</span>` : '<span style="color:#bdc3c7;">-</span>';
-                    
-                    html += `<tr>
-                                <td style="width: 90px; text-align: center;">${imgHtml}</td>
-                                <td><strong>${book.title}</strong></td>
-                                <td>${book.author}</td>
-                                <td>${book.volume}</td>
-                                <td>${seriesHtml}</td>
-                            </tr>`;
-                });
-                html += `</table>`;
-                
-                contentDiv.innerHTML += html;
-            }
-
-            if (contentDiv.innerHTML === '') {
-                contentDiv.innerHTML = '<p style="text-align:center; padding: 20px; color:#95a5a6;">目前沒有符合篩選條件的漫畫喔！</p>';
-            }
-        }
-    </script>
-</body>
-</html>
+                filterSelect.innerHTML += `<option value
