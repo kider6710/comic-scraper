@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日本漫畫情報戰略中心</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif, '微軟正黑體'; background-color: #f4f7f6; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { background-color: #ffffff; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); padding: 30px; max-width: 900px; width: 100%; }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 3px solid #e74c3c; padding-bottom: 10px; }
+        
+        /* 全新的過濾按鈕區塊 */
+        .filter-section { margin-bottom: 25px; padding: 15px; background: #fdfefe; border-radius: 8px; border: 1px solid #e1e8ed; }
+        .filter-title { font-weight: bold; color: #34495e; margin-bottom: 10px; font-size: 1.1em; }
+        .button-group { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; }
+        .filter-btn { padding: 8px 16px; border: 2px solid #bdc3c7; border-radius: 20px; background: white; color: #7f8c8d; cursor: pointer; font-weight: bold; transition: all 0.2s; outline: none; }
+        .filter-btn:hover { border-color: #e74c3c; color: #e74c3c; }
+        .filter-btn.active { background-color: #e74c3c; color: white; border-color: #e74c3c; box-shadow: 0 2px 5px rgba(231,76,60,0.3); }
+        
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; text-align: center; margin-top: 20px; }
+        .day-name { font-weight: bold; color: #7f8c8d; padding-bottom: 10px; }
+        .day-cell { padding: 15px; border-radius: 8px; background-color: #f9f9f9; border: 1px solid #eee; transition: all 0.3s ease; }
+        
+        /* 亮起的日期格子 */
+        .has-data { background-color: #fceceb; border-color: #e74c3c; color: #c0392b; cursor: pointer; font-weight: bold; }
+        .has-data:hover { background-color: #e74c3c; color: white; transform: translateY(-3px); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🇯🇵 日本漫畫情報戰略中心</h1>
+        
+        <div class="filter-section">
+            <div class="filter-title">🏢 選擇出版社：</div>
+            <div class="button-group" id="publisher-buttons">
+                <button class="filter-btn active" data-filter="all">全部出版社</button>
+                <button class="filter-btn" data-filter="集英社">集英社</button>
+                <button class="filter-btn" data-filter="講談社">講談社</button>
+                <button class="filter-btn" data-filter="小學館">小學館</button>
+            </div>
+
+            <div class="filter-title">🏷️ 選擇類型：</div>
+            <div class="button-group" id="genre-buttons">
+                <button class="filter-btn active" data-filter="all">全部類型</button>
+                <button class="filter-btn" data-filter="少年">少年漫畫</button>
+                <button class="filter-btn" data-filter="少女">少女漫畫</button>
+                <button class="filter-btn" data-filter="青年">青年漫畫</button>
+            </div>
+        </div>
+
+        <div class="calendar-grid" id="calendar-body">
+            </div>
+    </div>
+
+    <script>
+        // 這是管家為您準備的「過濾記憶體」
+        let activePublisher = 'all';
+        let activeGenre = 'all';
+
+        // 綁定按鈕魔法的函數
+        function setupButtons(containerId, filterType) {
+            const container = document.getElementById(containerId);
+            const buttons = container.querySelectorAll('.filter-btn');
+            
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // 解除其他按鈕的發光狀態
+                    buttons.forEach(b => b.classList.remove('active'));
+                    // 讓被點擊的按鈕發光
+                    btn.classList.add('active');
+                    
+                    // 記錄主人選擇的指令
+                    const selectedValue = btn.getAttribute('data-filter');
+                    if (filterType === 'publisher') activePublisher = selectedValue;
+                    if (filterType === 'genre') activeGenre = selectedValue;
+                    
+                    // 主人一下令，立刻重新描繪月曆！
+                    console.log(`正在為主人篩選 -> 出版社: ${activePublisher}, 類型: ${activeGenre}`);
+                    // renderCalendar(); // 未來這裡會呼叫真實的月曆渲染函數
+                });
+            });
+        }
+
+        // 啟動按鈕監聽
+        setupButtons('publisher-buttons', 'publisher');
+        setupButtons('genre-buttons', 'genre');
+
+    </script>
+</body>
+</html>
